@@ -256,8 +256,8 @@ void putPointsOfLineToCloud(sensor_msgs::PointCloud *pointCloud_msg, lineEquatio
             break;
         }
     }*/
-    while ( (pointCm1.y > lineCmEnd.y))
-    {//draws from the top to bottom
+    //while ( (pointCm1.y > lineCmEnd.y))
+    //{//draws from the top to bottom
         pointCm1.y = pointCm1.y - PAV_LINE_RESOLUTION*100;
 
         if (lineCmEnd.x == lineCmStart.x)
@@ -276,7 +276,7 @@ void putPointsOfLineToCloud(sensor_msgs::PointCloud *pointCloud_msg, lineEquatio
             ROS_ERROR("Point count overload!");
             //break;
         }
-    }
+    //}
 }
 
 //v buducnosti sa iba zadaju kalibracne udaje sirka v dvoch vyskach obrazu toho isteho objektu
