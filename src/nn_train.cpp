@@ -21,19 +21,20 @@
 #include <sensor_msgs/Image.h>
 
 std::string get_directory(std::string file_name, std::string file_num, std::string file_type);
-bool generateTrainData();
+bool generateTrainData(int numPic, int numIn, int numOut);
+double normalize_input2(double minIn, double maxIn, double min, double max, double value);
 
 int main()
 {
-	int num_layers = 6;
-	int num_input = 3;
+	int num_layers = 3;
+	int num_input = 100;
 	int num_neurons_hidden[4];
 	num_neurons_hidden[0] = 10;
 	num_neurons_hidden[1] = 5;
 	num_neurons_hidden[2] = 4;
 	num_neurons_hidden[3] = 3;
-	int num_output = 3;
-	struct fann *ann = fann_create_standard(num_layers, num_input, num_neurons_hidden[0], num_neurons_hidden[1], num_neurons_hidden[2], num_neurons_hidden[3], num_output);
+	int num_output = 1;
+	struct fann *ann = fann_create_standard(num_layers, num_input, num_neurons_hidden[0], num_output);
 
 	//START set training parameters
 	fann_set_activation_function_hidden(ann, FANN_SIGMOID_SYMMETRIC);
@@ -42,10 +43,11 @@ int main()
 	fann_set_learning_rate(ann, 0.6);
 	//END set training parameters
 
-	double desired_error = 0.0001;
+	double desired_error = 0.001;
 	int epochs_between_reports = 1;
 	int max_epochs = 100;
 	//vsetky vstupy a vystupy by mali byt v rozsahu (1, -1)
+	generateTrainData(10, num_input, num_output);
 	fann_train_on_file(ann, get_directory("trainData", "", "txt").c_str(), max_epochs, epochs_between_reports, desired_error);
 
 	std::string nn_dir;
@@ -53,8 +55,6 @@ int main()
 	fann_save(ann, nn_dir.c_str());
 
 	fann_destroy(ann);
-
-	generateTrainData();
 
 	return 0;
 }
@@ -69,16 +69,47 @@ std::string get_directory(std::string file_name, std::string file_num, std::stri
 	return file_directory;
 }
 
-bool generateTrainData()
+bool generateTrainData(int numPic, int numIn, int numOut)
 {
 	cv::Mat img;
-	std::ifstream trainData;
-	//namedWindow("read img", WINDOW_AUTOSIZE);
-	for (int numPic = 1; numPic < 11; numPic++)
+	std::ofstream trainData;
+	trainData.open(get_directory("trainData", "", "txt").c_str());
+	trainData << numPic << " " << numIn	<< " " << numOut << std::endl;//data header
+
+	for (int numVec = 1; numVec < (numPic + 1); numVec++)
 	{
-		img = cv::imread(get_directory("data/", std::to_string(numPic).c_str(), "jpg").c_str(), CV_LOAD_IMAGE_COLOR);
+		img = cv::imread(get_directory("data/", std::to_string(numVec).c_str(), "jpg").c_str(), CV_LOAD_IMAGE_COLOR);
+		cvtColor(img, img, CV_BGR2GRAY);
+		for (int i = 0; i < img.size().width; i++)
+		{
+			for (int j = 0; j < img.size().height; j++)
+			{
+				trainData << normalize_input2(0, 255, 0, 1, img.at<uchar>(j, i)) << " ";
+			}
+		}
+		trainData << std::endl;
+		if (numVec < 6)
+		{
+			trainData << 0;
+		}
+		else
+		{
+			trainData << 1;
+		}
+		trainData << std::endl;
 	}
+
+	trainData.close();
 	return true;
+}
+
+double normalize_input2(double minIn, double maxIn, double min, double max, double value)
+{
+	double k = 0;
+	k = (max - min)/(maxIn - minIn);
+	double q = 0;
+	q = min - k*minIn;
+	return (k*value + q);
 }
 
 /*
